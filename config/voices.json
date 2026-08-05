@@ -1,0 +1,16 @@
+{
+    "voices": [
+      {
+        "id": "uz-UZ-SardorNeural",
+        "name": "Sardor",
+        "gender": "Male",
+        "language": "Uzbek"
+      },
+      {
+        "id": "uz-UZ-MadinaNeural",
+        "name": "Madina",
+        "gender": "Female",
+        "language": "Uzbek"
+      }
+    ]
+  }
