@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 from src.models.voice import Voice
@@ -11,6 +12,8 @@ class VoicesConfigError(Exception):
 
 
 def _default_voices_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "config" / "voices.json"  # type: ignore[attr-defined]
     return Path(__file__).resolve().parents[2] / "config" / "voices.json"
 
 

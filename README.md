@@ -1,13 +1,49 @@
 # Uzbek Voice Generator
 
-CLI MVP that converts Uzbek text to MP3 speech using Microsoft Edge TTS (`edge-tts`). Male and Female voices are loaded from `config/voices.json`.
+Windows desktop app that turns Uzbek text into MP3 speech with Microsoft Edge TTS (`edge-tts`). Male and Female voices come from `config/voices.json`.
+
+Internet connection required (Edge TTS is online).
+
+![Demo](assets/demo.gif)
+
+## Quick start (GUI `.exe`)
+
+For non-technical users:
+
+1. Download **`UzbekTTS.exe`** from the [GitHub Releases](https://github.com/ludioo/Uzbek-Voice-Generator/releases) page.
+2. Put it in any folder and double-click.
+3. Enter Uzbek text (or use **Batch CSV**), choose Male/Female, Generate.
+4. MP3s are written next to the exe under `output/`.
+
+If Windows SmartScreen appears (“Windows protected your PC”), choose **More info → Run anyway** when you trust the release. Unsigned PyInstaller builds commonly trigger this; see [`docs/packaging.md`](docs/packaging.md).
+
+Typical download size: about **14 MB**.
+
+### Screenshots
+
+| Single text | Batch CSV |
+| --- | --- |
+| ![Single text](assets/screenshots/single_text.png) | ![Batch progress](assets/screenshots/batch_progress.png) |
+
+Also: ![After generate](assets/screenshots/single_success.png)
+
+### Run GUI from source
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python gui_main.py
+```
+
+Or: `python main.py --gui`
 
 ## Requirements
 
 - Windows
-- Python 3.12
+- Python 3.12 (for source / CLI / building the exe)
 
-## Install
+## Install (developers)
 
 ```powershell
 python -m venv .venv
@@ -15,16 +51,21 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Tests
+Dev/build tools (pytest, PyInstaller):
 
 ```powershell
 pip install -r requirements-dev.txt
+```
+
+## Tests
+
+```powershell
 pytest
 ```
 
 Unit tests only; no live Edge TTS network calls are required.
 
-## Run
+## CLI
 
 ### Interactive (one file)
 
@@ -32,7 +73,7 @@ Unit tests only; no live Edge TTS network calls are required.
 python main.py
 ```
 
-This starts the interactive CLI: enter Uzbek text, choose Male or Female, and set an output filename. The MP3 is written under `output/`. A bare basename like `hello` is enough — `.mp3` is added or normalized automatically.
+Enter Uzbek text, choose Male or Female, and set an output filename. The MP3 is written under `output/`. A bare basename like `hello` is enough — `.mp3` is added or normalized automatically.
 
 ### Batch from CSV
 
@@ -42,7 +83,7 @@ python main.py --csv examples/sample_batch.csv
 
 UTF-8 CSV must include columns `text`, `gender`, `filename` (exact names). Extra columns are ignored. Files saved from Excel as “CSV UTF-8” (with BOM) are supported.
 
-Batch output goes under `output/<csv_stem>/` (from the CSV basename). Example: `examples/uzbek_tts_manifest.csv` → `output/uzbek_tts_manifest/*.mp3`. Interactive mode still writes directly under `output/`.
+Batch output goes under `output/<csv_stem>/` (from the CSV basename). Example: `examples/uzbek_tts_manifest.csv` → `output/uzbek_tts_manifest/*.mp3`. Interactive mode and GUI single-text still write directly under `output/`.
 
 - `gender`: `1` = Male, `2` = Female only
 - `filename`: required on every non-empty row (`.mp3` is normalized by the service)
@@ -54,21 +95,32 @@ Batch output goes under `output/<csv_stem>/` (from the CSV basename). Example: `
 
 See [`examples/sample_batch.csv`](examples/sample_batch.csv).
 
+## Build the Windows `.exe`
+
+See [`docs/packaging.md`](docs/packaging.md) (PyInstaller onefile from `gui_main.py`).
+
 ## Troubleshooting
 
-- Empty text or invalid filename → the CLI shows a clear message; use a simple basename like `hello` or `hello.mp3` (no folders or `..`). Wrong extensions (e.g. `.wav`) are normalized to `.mp3`.
-- Batch CSV missing columns or unreadable file → process exits with code 1 before generating audio.
+- Empty text or invalid filename → clear message; use a simple basename like `hello` or `hello.mp3` (no folders or `..`). Wrong extensions (e.g. `.wav`) are normalized to `.mp3`.
+- Batch CSV missing columns or unreadable file → process exits / aborts before generating audio.
 - Network / TTS failure → check your internet connection and try again.
 - Save permission failure → ensure the `output/` folder is writable.
-- Logs appear in the console at INFO and above (warnings and errors included).
+- GUI logs appear at INFO and above when run from source; packaged exe surfaces failures via dialogs.
 
 ## Layout
 
+- `gui_main.py` — GUI entry
+- `main.py` — CLI (and `--gui`)
 - `src/config/` — voice config loading
 - `src/models/` — pure data models
 - `src/providers/` — Edge TTS integration
 - `src/services/` — generation orchestration
-- `src/ui/` — CLI presentation (interactive + CSV batch)
+- `src/ui/` — CLI + CustomTkinter GUI
 - `config/voices.json` — voice definitions
 - `examples/` — sample batch CSV
+- `assets/` — screenshots and demo GIF
 - `output/` — generated MP3 files
+
+## Promo copy
+
+Short Threads drafts: [`docs/promo_threads.md`](docs/promo_threads.md).

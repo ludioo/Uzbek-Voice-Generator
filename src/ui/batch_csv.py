@@ -26,6 +26,25 @@ class BatchCsvResult:
     aborted: bool = False
 
 
+@dataclass
+class BatchProgressEvent:
+    kind: str
+    message: str
+    row_index: int | None = None
+    completed: int = 0
+    total: int = 0
+    batch_result: BatchCsvResult | None = None
+
+
+ReportFn = Callable[[BatchProgressEvent], None]
+
+
+def _default_report(event: BatchProgressEvent) -> None:
+    if event.kind == "row_skip":
+        return
+    print(event.message)
+
+
 def _map_csv_gender(raw: str) -> str | None:
     value = raw.strip()
     if value == "1":
@@ -52,58 +71,119 @@ async def run_batch_csv(
     message_for: MessageFn,
     generate: GenerateFn | None = None,
     sleep: SleepFn | None = None,
+    report: ReportFn | None = None,
 ) -> BatchCsvResult:
     generate_fn = generate if generate is not None else generate_audio
     sleep_fn = sleep if sleep is not None else asyncio.sleep
+    report_fn = report if report is not None else _default_report
     result = BatchCsvResult()
 
     stem = csv_path.stem
     safe_stem = _validate_output_subdir(stem)
     if safe_stem is None:
-        print(
+        msg = (
             "CSV file name is invalid for an output folder. "
             "Use a simple basename without folders or special characters."
         )
         result.aborted = True
+        report_fn(
+            BatchProgressEvent(
+                kind="abort",
+                message=msg,
+                batch_result=result,
+            )
+        )
         return result
 
     try:
         with csv_path.open(encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             if reader.fieldnames is None:
-                print("CSV header is missing. Required columns: text,gender,filename")
+                msg = "CSV header is missing. Required columns: text,gender,filename"
                 result.aborted = True
+                report_fn(
+                    BatchProgressEvent(
+                        kind="abort",
+                        message=msg,
+                        batch_result=result,
+                    )
+                )
                 return result
 
             headers = set(reader.fieldnames)
             missing = [name for name in _REQUIRED_COLUMNS if name not in headers]
             if missing:
-                print(
+                msg = (
                     "CSV header is invalid. Required columns: text,gender,filename "
                     f"(missing: {', '.join(missing)})"
                 )
                 result.aborted = True
+                report_fn(
+                    BatchProgressEvent(
+                        kind="abort",
+                        message=msg,
+                        batch_result=result,
+                    )
+                )
                 return result
 
-            for index, row in enumerate(reader, start=2):
+            rows = list(reader)
+            total = len(rows)
+            completed = 0
+
+            for offset, row in enumerate(rows):
+                index = offset + 2
                 text = _field(row, "text")
                 gender_raw = _field(row, "gender")
                 filename = _field(row, "filename")
 
                 if _is_blank_row(text, gender_raw, filename):
                     result.skipped += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_skip",
+                            message=f"SKIP row {index}",
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
                     continue
 
                 gender = _map_csv_gender(gender_raw)
                 if gender is None:
-                    print(f"FAIL row {index}: Gender must be 1 (Male) or 2 (Female).")
+                    msg = f"FAIL row {index}: Gender must be 1 (Male) or 2 (Female)."
                     result.failed += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_fail",
+                            message=msg,
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
                     await sleep_fn(_ROW_DELAY_SECONDS)
                     continue
 
                 if not filename:
-                    print(f"FAIL row {index}: Filename is required.")
+                    msg = f"FAIL row {index}: Filename is required."
                     result.failed += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_fail",
+                            message=msg,
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
                     await sleep_fn(_ROW_DELAY_SECONDS)
                     continue
 
@@ -119,23 +199,72 @@ async def run_batch_csv(
                     )
                 except Exception:
                     logger.exception("Unexpected error during batch row %s", index)
-                    print(f"FAIL row {index}: An unexpected error occurred.")
+                    msg = f"FAIL row {index}: An unexpected error occurred."
                     result.failed += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_fail",
+                            message=msg,
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
                     await sleep_fn(_ROW_DELAY_SECONDS)
                     continue
 
                 if generation.success:
-                    print(f"OK row {index}: {generation.output_path}")
+                    msg = f"OK row {index}: {generation.output_path}"
                     result.ok += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_ok",
+                            message=msg,
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
                 else:
-                    print(f"FAIL row {index}: {message_for(generation)}")
+                    msg = f"FAIL row {index}: {message_for(generation)}"
                     result.failed += 1
+                    completed += 1
+                    report_fn(
+                        BatchProgressEvent(
+                            kind="row_fail",
+                            message=msg,
+                            row_index=index,
+                            completed=completed,
+                            total=total,
+                            batch_result=result,
+                        )
+                    )
 
                 await sleep_fn(_ROW_DELAY_SECONDS)
     except OSError as exc:
-        print(f"Unable to read CSV file: {exc}")
+        msg = f"Unable to read CSV file: {exc}"
         result.aborted = True
+        report_fn(
+            BatchProgressEvent(
+                kind="abort",
+                message=msg,
+                batch_result=result,
+            )
+        )
         return result
 
-    print(f"OK={result.ok} FAIL={result.failed} SKIPPED={result.skipped}")
+    summary = f"OK={result.ok} FAIL={result.failed} SKIPPED={result.skipped}"
+    report_fn(
+        BatchProgressEvent(
+            kind="summary",
+            message=summary,
+            completed=total,
+            total=total,
+            batch_result=result,
+        )
+    )
     return result

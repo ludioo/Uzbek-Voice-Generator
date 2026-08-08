@@ -1,4 +1,5 @@
 import logging
+import sys
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
@@ -15,11 +16,17 @@ _WINDOWS_FORBIDDEN = set('<>:"|?*')
 
 
 def _project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[2]
 
 
 def _output_dir() -> Path:
     return _project_root() / "output"
+
+
+def get_output_dir() -> Path:
+    return _output_dir()
 
 
 def _failure(kind: str, message: str) -> GenerationResult:

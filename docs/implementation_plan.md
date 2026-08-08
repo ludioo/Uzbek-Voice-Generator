@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | **Version** | 1.1 |
-| **Status** | Draft / Awaiting Review |
+| **Status** | MVP complete · Phase 2 GUI complete (G0–G10) |
 | **Product** | Uzbek Voice Generator (MVP) |
 | **Sources of truth** | [PRD](prd.md), [Architecture](architecture.md), [Cursor Rules](cursor_rules.md); architectural simplifications recorded in [DECISIONS.md](DECISIONS.md) (to be created) |
 | **Platform** | Windows · Python 3.12 · CLI first |
@@ -710,7 +710,7 @@ Do **not** start these until MVP is accepted and a new plan is approved.
 
 ---
 
-## Implementation gate
+## Implementation gate (MVP)
 
 > **Stop here until this plan is reviewed and approved.**  
 > **Also complete and approve Phase 0 (Architecture Validation)** — including `docs/DECISIONS.md` initial entries — **before any production coding (Phase 1+).**  
@@ -718,4 +718,62 @@ Do **not** start these until MVP is accepted and a new plan is approved.
 
 ---
 
-*End of Implementation Plan v1.1*
+## Phase 2 — GUI Development (Post-MVP)
+
+| Field | Value |
+| --- | --- |
+| **Track** | Post-MVP / Phase 2 GUI |
+| **Status** | Complete (G0–G10) |
+| **Depends on** | MVP Phases 0–10 complete (CLI + CSV batch live) |
+| **UI toolkit** | CustomTkinter ([ADR-010](DECISIONS.md)) |
+| **Shared engine** | Existing `src/services/` + providers ([ADR-011](DECISIONS.md)) — not a new `core/` package |
+| **CLI** | Retained; not replaced |
+
+> Note: MVP **Phase 2 — Models** above is historical and complete. This section is the separate **product Phase 2 (GUI)** roadmap. Implement GUI milestones one at a time; wait for approval between milestones per Cursor Rules.
+
+### Goals
+
+- Windows desktop native GUI for single-text and CSV batch generation.
+- Non-technical users can generate audio without the CLI; setup ideally under ~5 minutes via `.exe`.
+- No UI freeze during batch; preview before final use; output folder management.
+- No speed/pitch controls (Edge TTS Uzbek constraint).
+
+### Milestone checklist
+
+- [x] **G0 — Align & decide** — ADR-010/ADR-011 confirmed. Entrypoint: `gui_main.py` and `python main.py --gui` (both launch the same GUI).
+- [x] **G1 — Shared-path audit** — CLI/`batch_csv` call `generate_audio` only (no Edge TTS in UI). Shared friendly `message_for` extracted to `src/ui/messages.py` (G4); batch progress callbacks still `print` only until G6; avoid private `_validate_output_subdir` import long-term. No parallel `core/` package.
+- [x] **G2 — GUI skeleton** — CustomTkinter window with clear areas/tabs for **Single text** and **Batch CSV**; empty actions wired to placeholders; no Edge TTS imports in GUI modules.
+- [x] **G3 — Voice selection** — Male/Female dropdown bound to `config/voices.json` (same voices as CLI).
+- [x] **G4 — Single-text generate** — Call `generate_audio` from a worker; show success/failure via friendly dialogs; write under `output/` with existing `.mp3` rules. Done: `GenerateWorker` in `src/ui/gui/workers.py`; CLI+GUI share `src/ui/messages.py`; busy-state + `tkinter.messagebox`; flat `output/` (no `output_subdir`).
+- [x] **G5 — Audio preview / play** — Play generated MP3 before user finishes the flow; playback must not freeze the UI; justify any new dependency. Done: `os.startfile` Play (ADR-012); `_last_output_path`; no new deps.
+- [x] **G6 — CSV batch + progress** — File picker; reuse/extend batch CSV flow; progress bar + queue; worker thread/async bridge; row-level OK/FAIL; continue after row errors; respect batch output subfolder policy. Done: `BatchProgressEvent` + optional `report` in `batch_csv.py`; `BatchWorker`; Browse/Run/progress/log; cross-tab busy.
+- [x] **G7 — Output / download management** — Show/open output folder; surface auto-rename / `.mp3` normalization; batch folder `output/<csv_stem>/` parity with CLI. Done: `get_output_dir()`; Open folder (single/batch); `.mp3` normalized status note (ADR-013).
+- [x] **G8 — Manual testing** — Single text; batch CSV; corrupt/missing CSV; empty text; invalid filename; network/TTS failure; save permission; UI remains responsive under batch. Done: `docs/manual_testing_gui.md` (MT-01…MT-16 + CLI smoke Pass).
+- [x] **G9 — Package `.exe`** — PyInstaller (or approved equivalent) for Windows; test on a clean Windows machine without a pre-existing venv workflow; document size and antivirus false-positive notes if any. Done: ADR-014; frozen paths; `uzbek_tts_gui.spec`; `docs/packaging.md` (~14.1 MB onefile; clean-folder smoke).
+- [x] **G10 — Docs & promo** — Update README (GUI install + screenshots); add demo GIF; push GitHub-ready materials; prepare short Threads promo copy pointing at the `.exe`/release. Done: README GUI-first; `assets/screenshots/` + `assets/demo.gif`; `docs/promo_threads.md`; packaging release notes.
+
+### Explicitly out of scope (this track)
+
+- Speed / pitch / synthesis volume controls
+- Web/Gradio UI
+- Removing CLI
+- Controllers / `src/app/` / parallel `src/core/` TTS engine
+- Cloud hosting, auth, database
+
+### Definition of done (GUI Phase 2)
+
+1. Non-technical happy path works for single text and CSV batch in the GUI.
+2. CLI interactive and `--csv` still pass smoke checks.
+3. No duplicated Edge TTS or filename/voice rules in GUI code.
+4. Packaged Windows build documented and smoke-tested on clean Windows.
+5. README + visual demo assets ready for public GitHub / Threads distribution.
+
+---
+
+## Implementation gate (GUI)
+
+> Phase 2 GUI milestones G0–G10 are complete. Further GUI work needs a new approved plan / ADR.
+
+---
+
+*End of Implementation Plan v1.1 (+ Phase 2 GUI appendix)*

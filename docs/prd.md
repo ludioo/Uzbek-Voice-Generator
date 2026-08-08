@@ -1,7 +1,7 @@
 # PRD - Uzbek Voice Generator
 
 Version: 1.0
-Status: MVP
+Status: MVP + Phase 2 GUI complete
 Author: ChatGPT
 Target Platform: Windows
 Language: Python 3.12
@@ -318,3 +318,64 @@ The MVP is considered complete when:
 ✓ Errors are handled gracefully.
 
 ✓ Code is clean and maintainable.
+
+---
+
+# Phase 2 — GUI Development
+
+Status: Complete (post-MVP; G0–G10 shipped)
+
+CLI MVP (interactive + CSV batch) remains supported. Phase 2 adds a Windows desktop GUI for non-technical users while keeping the same generation pipeline. Packaged entry: `UzbekTTS.exe` (PyInstaller onefile; see `docs/packaging.md`). Dev entries: `gui_main.py` / `python main.py --gui`.
+
+## Why GUI next
+
+The CLI satisfies power users and automation. Public distribution (GitHub + Threads) needs a path where people who do not use terminals can still generate Uzbek speech. A native Windows GUI is the next product step toward a single `.exe` install.
+
+## Target users
+
+- General public discovering the project on GitHub or Threads
+- Non-technical content creators who need Male/Female Uzbek MP3s quickly
+- Existing CLI users who optionally prefer a visual batch workflow
+
+Technical level for Phase 2 success: no Python or terminal knowledge required for the packaged app.
+
+## Goals
+
+- Ship a Windows desktop native GUI (not a web app).
+- Let a non-technical user generate single-text and CSV-batch audio without the CLI.
+- Keep install/setup under about 5 minutes (ideally one `.exe` via PyInstaller).
+- Reuse the existing Service → Provider stack; do not duplicate Edge TTS or validation logic in UI code.
+- Retain the CLI for power users and automation.
+
+## Success criteria
+
+- A first-time Windows user can generate a Male or Female MP3 from typed text using only the GUI.
+- The same user can upload a UTF-8 CSV, see progress, and receive files under the managed output folder.
+- UI stays responsive during batch (progress bar + queue; TTS work off the main UI thread).
+- User can preview/play generated audio before treating it as final.
+- Setup for the packaged build is documented and typically under 5 minutes.
+- CLI interactive and `--csv` modes still work after GUI work lands.
+
+## Mandatory features
+
+- Manual text input (single generation)
+- Upload and process CSV (batch), consistent with existing CSV columns (`text`, `gender`, `filename`)
+- Voice select: Male / Female dropdown (Uzbek Edge TTS voices from config)
+- Preview / play generated audio before save (or before closing the result flow)
+- Progress bar and queue for CSV batch; no UI freeze
+- Output / download management (output folder, auto `.mp3` rename / normalization, batch subfolder policy aligned with CLI)
+- Friendly error dialogs for empty text, invalid files, network/TTS failure, and save permission issues
+
+## Out of scope (Phase 2)
+
+- Speed / rate controls
+- Pitch controls
+- Volume as a synthesis parameter (Edge TTS Uzbek model limitation for this product — treat as a documented constraint, not a defect)
+- Cloud hosting, SaaS, authentication, or online editor
+- Voice cloning, training, or non–Edge TTS providers
+- Replacing or removing the CLI
+- Web UI / Gradio / browser-based apps
+
+## Constraint note
+
+Edge TTS Uzbek voices used by this project do not expose reliable productized speed/pitch controls for this app. Phase 2 must not advertise or implement those controls.

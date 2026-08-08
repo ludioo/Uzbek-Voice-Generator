@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from src.models.generation import GenerationRequest, GenerationResult
-from src.ui.batch_csv import run_batch_csv
+from src.ui.batch_csv import BatchProgressEvent, run_batch_csv
 
 
 def _message_for(result: GenerationResult) -> str:
@@ -248,6 +248,50 @@ class TestBatchCsv(unittest.TestCase):
         printed = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
         self.assertIn("FAIL row 2", printed)
         self.assertIn("OK row 3", printed)
+
+    def test_custom_report_receives_progress_events(self) -> None:
+        generate = AsyncMock(
+            side_effect=[
+                GenerationResult(
+                    success=False,
+                    error_kind="tts_failure",
+                    error_message="boom",
+                ),
+                GenerationResult(success=True, output_path="output/b.mp3"),
+            ]
+        )
+        sleep = AsyncMock()
+        events: list[BatchProgressEvent] = []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_path = Path(tmp) / "batch.csv"
+            csv_path.write_text(
+                "text,gender,filename\n"
+                "Fail,1,a.mp3\n"
+                ",,\n"
+                "Ok,2,b.mp3\n",
+                encoding="utf-8",
+            )
+            result = asyncio.run(
+                run_batch_csv(
+                    csv_path,
+                    message_for=_message_for,
+                    generate=generate,
+                    sleep=sleep,
+                    report=events.append,
+                )
+            )
+
+        self.assertEqual(result.ok, 1)
+        self.assertEqual(result.failed, 1)
+        self.assertEqual(result.skipped, 1)
+        kinds = [event.kind for event in events]
+        self.assertEqual(kinds, ["row_fail", "row_skip", "row_ok", "summary"])
+        self.assertEqual(events[0].completed, 1)
+        self.assertEqual(events[0].total, 3)
+        self.assertEqual(events[2].completed, 3)
+        self.assertEqual(events[2].total, 3)
+        self.assertEqual(events[-1].message, "OK=1 FAIL=1 SKIPPED=1")
 
     def test_filename_passed_through(self) -> None:
         generate = AsyncMock(

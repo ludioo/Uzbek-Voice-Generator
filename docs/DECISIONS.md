@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADR)
 
-Project: Uzbek Voice Generator (MVP)
+Project: Uzbek Voice Generator (MVP + Phase 2 GUI)
 
 This file records architectural and technical decisions made during implementation.
 Whenever a lasting decision is made, append a new entry using the template fields below.
@@ -99,3 +99,44 @@ Required fields for every entry: **Date**, **Decision**, **Reason**, **Trade-off
 - **Reason:** Keeps outputs from different CSV manifests separated and easier to find without changing CSV filename columns or interactive UX.
 - **Trade-offs:** Unsafe CSV basenames abort the batch before generation; older flat files already under `output/` are not moved automatically.
 - **Consequences:** Batch UI must pass `csv_path.stem` as `output_subdir`. Do not put folder paths in the CSV `filename` column. Provider remains path-agnostic.
+
+### ADR-010 — GUI Framework Selection (CustomTkinter)
+
+- **Date:** 2026-08-08
+- **Decision:** Phase 2 Windows desktop GUI will use **CustomTkinter**. Do not build a web UI (Gradio/Flask/FastAPI+frontend) for Phase 2. Do not adopt PyQt5/PySide6 unless a later ADR supersedes this choice.
+- **Reason:** The product target is a native Windows desktop app, ideally a single PyInstaller `.exe` for non-technical users. CustomTkinter sits on Tk (commonly available with CPython on Windows), stays relatively small and simple for forms (text, dropdown, file picker, progress bar), and packages more lightly than full Qt stacks for this scope. PyQt5/PySide6 offer richer widgets and polish but pull large Qt binaries and typically inflate `.exe` size and packaging complexity without a clear need for this app’s screen set. Web/Gradio was rejected because it implies a browser/server model, conflicts with “native desktop / single exe,” and is a poorer fit for offline-feeling local file workflows and Threads/GitHub distribution messaging.
+- **Trade-offs:** CustomTkinter’s look-and-feel and widget set are less rich than Qt; very advanced media controls may need a small extra dependency for MP3 preview. Qt would give denser UI kits at the cost of heavier builds. A web UI would speed prototyping but would not match the stated Windows-native packaging goal.
+- **Consequences:** Add `customtkinter` (and only justified preview/packaging deps) via approved dependency review. Implement GUI under `src/ui/gui/` calling existing services — no Edge TTS imports in GUI modules. PyInstaller recipes should target CustomTkinter + `edge-tts`. Document expected installer/`exe` size vs CLI-only. If packaging proves blocked by CustomTkinter specifically, open a new ADR before switching to PySide6.
+
+### ADR-011 — Shared generation core remains Service layer (no parallel `core/` package)
+
+- **Date:** 2026-08-08
+- **Decision:** Phase 2 does **not** introduce a new top-level `core/tts_engine.py` (or `src/core/`) that duplicates TTS/CSV/output logic. CLI and GUI both continue to consume `src/services/audio_service.py` (and existing providers/config/models). Batch CSV orchestration remains UI-adjacent per ADR-008, reusable by the GUI without moving synthesis into the presentation widgets.
+- **Reason:** MVP already extracted Edge TTS, validation, voice mapping, and output policy behind the service. A second “core” package would fork the architecture, fight ADR-003 package boundaries, and risk divergent filename/voice behavior between CLI and GUI.
+- **Trade-offs:** Naming differs from informal “core engine” language in some planning notes; implementers must treat **Service** as the shared engine. Large GUI files may still need worker helpers under `src/ui/gui/`, which are presentation infrastructure, not a second business layer.
+- **Consequences:** GUI code must call `generate_audio` (or thin wrappers around it). Do not copy Edge TTS calls into GUI. Do not relocate CSV column rules into the provider. Any true shared non-UI helper needed by both CLI batch and GUI batch may be extracted only when two callers exist and an ADR notes the move.
+- **Follow-up (G4, 2026-08-08):** Friendly user copy for `GenerationResult.error_kind` moved from `src/ui/cli.py` into shared `src/ui/messages.py` (`message_for`). CLI interactive/batch and GUI single-generate both import it. Remains UI-layer presentation text (not a second service/core package). GUI generation uses `src/ui/gui/workers.py` (`GenerateWorker`: background thread + `asyncio.run(generate_audio)`), marshalled back to the CustomTkinter main thread via `after` — presentation infrastructure per this ADR, not business logic.
+
+### ADR-012 — GUI audio preview via OS default player
+
+- **Date:** 2026-08-08
+- **Decision:** Single-text Play uses Windows `os.startfile(mp3_path)` to open the last successful output in the OS default media player. Do not add pygame, playsound, or other in-process audio libraries for Phase 2 preview.
+- **Reason:** G5 needs play-before-finish, not scrubber/pause/seek. `os.startfile` is stdlib, returns immediately (no UI freeze), and keeps packaging weight aligned with ADR-010.
+- **Trade-offs:** No in-app transport controls; playback depends on the user’s associated MP3 app; non-Windows ports would need a different launcher later.
+- **Consequences:** Play stays disabled until a successful generate stores `_last_output_path`. Failures opening the file show a friendly dialog and are logged. Do not import providers or synthesize again for preview.
+
+### ADR-013 — GUI open-folder uses `get_output_dir` + OS shell
+
+- **Date:** 2026-08-08
+- **Decision:** GUI “Open folder” uses `os.startfile` on `get_output_dir()` (public wrapper over the service output root). Single-text prefers the parent of `_last_output_path` when set; batch prefers `output/<csv_stem>/` via `_last_batch_dir` after a run. Do not reimplement filename/subdir validation in widgets.
+- **Reason:** Keeps ADR-007/ADR-009 path policy in the service and ADR-012’s stdlib shell launch pattern for both preview and folder reveal.
+- **Trade-offs:** Same OS-association dependency as Play; folder is created with `mkdir` if missing so empty `output/` can still open.
+- **Consequences:** GUI must call `get_output_dir()` rather than hard-coding `output/` relative to CWD. Batch progress reporting stays in `run_batch_csv` (optional `report` callback); CLI default reporter still prints the same OK/FAIL/summary lines.
+
+### ADR-014 — PyInstaller onefile GUI; frozen resource vs writable root
+
+- **Date:** 2026-08-08
+- **Decision:** Ship the Phase 2 GUI as a **PyInstaller onefile** Windows build (`UzbekTTS.exe`) from entry `gui_main.py` with `console=False`. When `getattr(sys, "frozen", False)`: read bundled resources (e.g. `config/voices.json`) from `sys._MEIPASS`; write `output/` under `Path(sys.executable).parent / "output"`. Unfrozen (dev) layout stays project-root via `Path(__file__).parents[…]`.
+- **Reason:** Matches ADR-010 / PRD “single `.exe` / ~5 min setup.” Writing into `_MEIPASS` would lose files on exit or fail permission checks. Reading voices from beside the exe would force shipping a sidecar JSON for every release.
+- **Trade-offs:** Onefile cold start is slower than onedir; unsigned builds often trip SmartScreen/AV false positives. Bundle size includes CustomTkinter + `edge-tts` stack.
+- **Consequences:** Bundle `config/voices.json` as datas; `collect_all('customtkinter')`. Pin PyInstaller in `requirements-dev.txt` only. Document build, size, and AV notes in `docs/packaging.md`. Do not commit `dist/` / `build/`. Revisit onedir only via a new ADR if AV or extract bugs block distribution.
