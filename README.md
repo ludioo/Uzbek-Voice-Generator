@@ -15,7 +15,7 @@ For non-technical users:
 3. Enter Uzbek text (or use **Batch CSV**), choose Male/Female, Generate.
 4. MP3s are written next to the exe under `output/`.
 
-If Windows SmartScreen appears (“Windows protected your PC”), choose **More info → Run anyway** when you trust the release. Unsigned PyInstaller builds commonly trigger this; see [`docs/packaging.md`](docs/packaging.md).
+If Windows SmartScreen appears (“Windows protected your PC”), choose **More info → Run anyway** when you trust the release. Unsigned PyInstaller builds commonly trigger this.
 
 Typical download size: about **14 MB**.
 
@@ -97,7 +97,12 @@ See [`examples/sample_batch.csv`](examples/sample_batch.csv).
 
 ## Build the Windows `.exe`
 
-See [`docs/packaging.md`](docs/packaging.md) (PyInstaller onefile from `gui_main.py`).
+```powershell
+pip install -r requirements-dev.txt
+pyinstaller uzbek_tts_gui.spec
+```
+
+Artifact: `dist/UzbekTTS.exe` (onefile, no console). When frozen, `config/voices.json` is bundled and `output/` is created beside the exe.
 
 ## Troubleshooting
 
@@ -120,7 +125,4 @@ See [`docs/packaging.md`](docs/packaging.md) (PyInstaller onefile from `gui_main
 - `examples/` — sample batch CSV
 - `assets/` — screenshots and demo GIF
 - `output/` — generated MP3 files
-
-## Promo copy
-
-Short Threads drafts: [`docs/promo_threads.md`](docs/promo_threads.md).
+- `uzbek_tts_gui.spec` — PyInstaller recipe

@@ -43,3 +43,6 @@ Desktop.ini
 
 # Cursor local
 .cursor/
+
+# Local planning / ADR docs (not published to git)
+docs/
