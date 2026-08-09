@@ -18,9 +18,19 @@ Enter Uzbek text, select a voice, and generate MP3 audio directly from the deskt
 
 ## Voice Samples
 
-> TODO: Voice samples will be added in a future update.
+These samples were generated with Uzbek Voice Generator so you can hear the built-in Uzbek voices before downloading.
 
-Male and female Uzbek voice examples will appear here once sample audio is published.
+**Sample text:**
+
+> Assalomu alaykum
+
+### Male — Sardor
+
+[Listen to male voice sample](./assets/sample_sardor_male.mp3)
+
+### Female — Madina
+
+[Listen to female voice sample](./assets/sample_madina_female.mp3)
 
 ## Download
 
