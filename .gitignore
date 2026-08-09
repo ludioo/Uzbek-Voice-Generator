@@ -38,6 +38,9 @@ credentials.json
 *.swp
 *.swo
 
+# Logs
+*.log
+
 # OS
 Thumbs.db
 Desktop.ini

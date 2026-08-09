@@ -61,6 +61,15 @@ Most users should use the `.exe`. Developers who want to run from source can fol
 3. Choose **Male** or **Female**, set a filename, and click **Generate**.
 4. MP3s are written next to the exe under `output/`. Use **Play** or **Open folder** afterward.
 
+## ❤️ Support the Project
+
+> Uzbek Voice Generator is free and open source.
+>
+> If this tool is useful to you, consider supporting its development. Your support helps with maintenance, bug fixes, improvements, and future Uzbek voice-related projects.
+
+- [GitHub Sponsors](https://github.com/sponsors/ludioo)
+- [Ko-fi](https://ko-fi.com/ludioo)
+
 ---
 
 ## Requirements
@@ -162,10 +171,22 @@ Artifact: `dist/UzbekTTS.exe` (onefile, no console). When frozen, `config/voices
 - `src/ui/` — CLI + CustomTkinter GUI
 - `config/voices.json` — voice definitions
 - `examples/` — sample batch CSV
-- `assets/` — screenshots and demo GIF
+- `assets/` — screenshots, demo GIF, and voice samples
 - `output/` — generated MP3 files
 - `uzbek_tts_gui.spec` — PyInstaller recipe
 
 ## Contributing
 
-Issues and pull requests are welcome. Keep changes focused; run `pytest` before opening a PR.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines. Keep changes focused; run `pytest` before opening a PR.
+
+## License
+
+This project is licensed under the MIT License.
+
+See the [LICENSE](./LICENSE) file for details.
+
+### Third-Party Services
+
+This project uses Microsoft Edge TTS through the `edge-tts` package.
+
+Third-party services and dependencies remain subject to their respective licenses and terms of use.
