@@ -29,6 +29,8 @@ output/**
 # Environment / secrets
 .env
 .env.*
+*.pem
+credentials.json
 
 # IDE / editor
 .idea/

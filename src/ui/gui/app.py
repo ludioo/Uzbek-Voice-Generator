@@ -26,7 +26,7 @@ _OPEN_FOLDER_ERROR = "Could not open the output folder."
 class UzbekTTSApp(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Uzbek TTS Generator")
+        self.title("Uzbek Voice Generator")
         self.geometry("720x560")
         self.minsize(640, 520)
 
@@ -136,7 +136,7 @@ class UzbekTTSApp(ctk.CTk):
         status_text = (
             _CONFIG_ERROR_STATUS
             if voice_load_failed
-            else "Ready."
+            else "Ready — MP3s save to the output folder."
         )
         self._single_status = ctk.CTkLabel(
             parent,
@@ -204,7 +204,7 @@ class UzbekTTSApp(ctk.CTk):
 
         self._batch_status = ctk.CTkLabel(
             parent,
-            text="Ready.",
+            text="Select a UTF-8 CSV, then Run batch.",
             anchor="w",
         )
         self._batch_status.grid(row=5, column=0, sticky="ew", padx=8, pady=4)

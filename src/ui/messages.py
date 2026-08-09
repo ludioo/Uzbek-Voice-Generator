@@ -1,7 +1,7 @@
 from src.models.generation import GenerationResult
 
 ERROR_MESSAGES = {
-    "empty_text": "Text must not be empty.",
+    "empty_text": "Please enter Uzbek text before generating audio.",
     "invalid_filename": (
         "Filename is invalid. Use a simple name like hello.mp3 (no folders)."
     ),
