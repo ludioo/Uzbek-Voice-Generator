@@ -44,6 +44,25 @@ If Windows SmartScreen appears (“Windows protected your PC”), choose **More 
 
 Most users should use the `.exe`. Developers who want to run from source can follow [Run from source](#run-from-source) below.
 
+## Verify Download (Optional)
+
+For users who want to verify the downloaded executable, the SHA-256 checksum for `UzbekTTS.exe` is provided below.
+
+[SHA-256 checksum](./SHA256SUMS.txt)
+
+```text
+SHA-256:
+219a150a9d4d30ceef6ad6629b6a8de1069d2a863377773196f8767f56ddec5b
+```
+
+You can verify the file on Windows with PowerShell:
+
+```powershell
+Get-FileHash .\UzbekTTS.exe -Algorithm SHA256
+```
+
+The resulting hash should match the checksum above.
+
 ## Features
 
 * 🇺🇿 Uzbek text-to-speech
